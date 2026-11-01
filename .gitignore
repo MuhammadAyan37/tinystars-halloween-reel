@@ -1,0 +1,36 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# Children's photos and everything made from them never go in git:
+# originals, working copies, face boxes, renders and exports
+source/
+work/
+exports/*
+!exports/captions.md
+*.heic
+*.HEIC
+*.jpg
+*.jpeg
+*.png
+*.webp
+*.mp4
+*.mov
+*.wav
+*.mp3
+*.zip
+
+# fetched by tools/fetch_assets.py
+models/
+brand/fonts/
+brand/*.png
+brand/*.svg
+brand/*.webp
+
+# allow the photo-free README image
+!docs/*.png
+
+# secrets
+.env
+.env.*
