@@ -15,6 +15,7 @@ Code that turns a folder of Halloween photo-booth pictures from [Tiny Stars Dayc
   - a numbered **vote grid** with a glowing frame that hops between costumes
   - an animated **"Thanks for Watching"** outro in a haunted classroom: neon lettering on a lightning strike, glass contact cards that glitch in, drifting embers, fog and bats
 - **A no-music version** (same picture, sound effects only), for adding a trending sound inside the app.
+- **A phone copy**: the same full-HD reel as a two-pass encode under 30 MiB, small enough to send to a phone.
 - **A 10-slide 4:5 carousel**, a numbered collage of the 12 costumes, and a reel cover.
 
 ## Privacy first

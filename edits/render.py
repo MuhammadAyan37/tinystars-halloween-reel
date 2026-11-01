@@ -534,6 +534,11 @@ def grade(img):
     return out
 
 
+def sharpen(img, sigma=1.6, amount=0.7):
+    """Gentle unsharp mask (uint8 in, uint8 out): the photos were taken indoors on a phone and are a little soft."""
+    return cv2.addWeighted(img, 1 + amount, cv2.GaussianBlur(img, (0, 0), sigma), -amount, 0)
+
+
 def make_overlay(top=0.6, bottom=0.5, vig=0.45):
     """Darkening for legibility: top band (labels), bottom band (app UI), heavy horror vignette."""
     y = np.arange(H, dtype=np.float32)[:, None]
@@ -596,7 +601,7 @@ class Photo:
         f = min(1.0, (H * 1.12) / (win_h * 0.86))
         if f < 1:
             img = cv2.resize(img, (round(ws * f), round(hs * f)), interpolation=cv2.INTER_AREA)
-        self.img = grade(img)
+        self.img = grade(sharpen(img))
         self.win_h = win_h * f
         self.hs, self.ws = self.img.shape[:2]
         self.cx, self.cy = self.clamp(cx * f, cy * f, self.win_h)
@@ -789,7 +794,6 @@ class Renderer:
         self.bolts = [to_sprite(bolt_image(s)) for s in range(4)]
         self.fog = periodic_noise(H // 4, W // 4, 3)
         self.fog2 = periodic_noise(H // 4, W // 4, 11, ((4, 1.0), (10, 0.6)))
-        self.grain = [np.random.default_rng(s).normal(0, 1, (H // 2, W // 2)).astype(np.float32) for s in range(6)]
         self.bat_flights = self.plan_bats()
 
     # ----- builders -----
@@ -899,11 +903,6 @@ class Renderer:
         band = np.clip((y - y_from) / (1 - y_from), 0, 1) ** 1.2
         a = (tex * band * density)[..., None]
         return img * (1 - a) + np.array(color, np.float32) * a
-
-    def draw_grain(self, img, t, amount=0.012):
-        g = self.grain[int(t * FPS) % len(self.grain)]
-        g = cv2.resize(g, (W, H), interpolation=cv2.INTER_NEAREST)
-        return img + g[..., None] * amount
 
     def draw_embers(self, img, t, n=16, strength=1.0):
         """Glowing embers drifting up and swaying, twinkling as they go."""
@@ -1161,7 +1160,6 @@ class Renderer:
             since = t - sg["t0"]
             if since < post:
                 img = self.fx(sg, img, since, post, prv=prv)
-        img = self.draw_grain(img, t)
         return img
 
     def fx(self, sg, img, dt, dur, prv):
@@ -1336,6 +1334,22 @@ def encode(raw_path, out_path, audio, dur):
     raise SystemExit("ffmpeg failed")
 
 
+def phone_copy(src, out_path, mib=29.0):
+    """The same full-HD reel as a two-pass encode sized to fit under phone and web file limits (30 MiB)."""
+    dur = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                                str(src)], capture_output=True, text=True, check=True).stdout)
+    kbps = int(mib * 1024 * 1024 * 8 / dur / 1000) - 192 - 100  # leave room for the audio and the container
+    log = str(ROOT / "work" / "x264pass")
+    common = ["-c:v", "libx264", "-preset", "slow", "-b:v", f"{kbps}k", "-maxrate", f"{kbps * 2}k",
+              "-bufsize", f"{kbps * 4}k", "-profile:v", "high", "-pix_fmt", "yuv420p", "-g", str(FPS * 2),
+              "-x264-params", "rc-lookahead=20", "-threads", "4", "-passlogfile", log]
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), *common, "-pass", "1", "-an", "-f", "null",
+                    "-"], check=True)
+    subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), *common, "-pass", "2", "-c:a", "copy",
+                    "-movflags", "+faststart", str(out_path)], check=True)
+    print("wrote", out_path, f"({out_path.stat().st_size / 2 ** 20:.1f} MiB)")
+
+
 def remux(video, audio, out_path):
     """Same picture, different soundtrack (no re-encode of the video)."""
     subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(video), "-i", str(audio), "-map", "0:v",
@@ -1357,6 +1371,7 @@ def main():
     reel = EXPORTS / "tinystars_halloween_reel.mp4"
     encode(raw, reel, music, dur)
     remux(reel, sfx_only, EXPORTS / "tinystars_halloween_reel_nomusic.mp4")
+    phone_copy(reel, EXPORTS / "tinystars_halloween_reel_phone.mp4")
     raw.unlink()
 
 
