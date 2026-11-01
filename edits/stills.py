@@ -30,10 +30,10 @@ def main():
             cv2.imwrite(str(OUT / f"t_{t:.2f}.png"), still(r, t))
         return
     cold, title, vote, outro = (r.seg(k) for k in ("cold", "title", "vote", "outro"))
-    times = [0.13, 0.7, 1.3, 2.0, title["t0"] + 0.05, title["t0"] + 0.6, title["t0"] + 1.5]
-    times += [(s["t0"] + s["t1"]) / 2 for s in r.segs if s["kind"] in ("shot", "family")]
-    times += [vote["t0"] + d for d in (0.5, 2.5)]
-    times += [outro["t0"] + d for d in (0.3, 0.45, 1.2, 2.0, 3.5, 6.0)]
+    times = [0.11, 0.5, 0.9, 1.3, title["t0"] + 0.05, title["t0"] + 0.6, title["t0"] + 1.6]
+    times += [(s["t0"] + s["t1"]) / 2 for s in r.segs if s["kind"] == "shot"]
+    times += [vote["t0"] + d for d in (0.4, 1.5)]
+    times += [outro["t0"] + d for d in (0.3, 0.45, 1.0, 1.5, 2.2, 3.2, 4.5, 5.6)]
     tiles = []
     for t in sorted(times):
         im = cv2.resize(still(r, t), (360, 640), interpolation=cv2.INTER_AREA)

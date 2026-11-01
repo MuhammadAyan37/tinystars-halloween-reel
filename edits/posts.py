@@ -16,13 +16,13 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from content import BRAND, SHOTS  # noqa: E402
-from render import (F_BODY, F_HORROR, GOLD, INK, OPENGEN, ORANGE, SLIME, CREAM, Renderer, blit,  # noqa: E402
-                    drippy_pill, fit_width, font, label_sprite, pumpkin_badge, stack, text_image, to_sprite)
+from render import (F_GOTH, F_SANS, NEON, OPENGEN, PEACH, WHITE, CREAM, Renderer, blit, costume_label,  # noqa: E402
+                    fit_width, flanked, font, lettering, photo_tile, place_label, to_sprite)
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "exports" / "post"
 PW, PH = 1080, 1350
-HEROES = ["IMG_8302", "IMG_8187", "IMG_8030", "IMG_8309", "IMG_8386", "IMG_8202", "IMG_8335", "IMG_8274"]
+HEROES = ["IMG_8302", "IMG_8187", "IMG_8030", "IMG_8386", "IMG_8113", "IMG_8309", "IMG_8335", "IMG_8274"]
 
 
 def still_bg(name, darken=0.0):
@@ -55,72 +55,74 @@ def save(img, path):
 
 def hero_slide(r, idx):
     shot = SHOTS[idx]
-    img = r.photo(shot).crop(PW, PH, 0.82)
-    img = vignette(top_band(img), 0.55)
-    blit(img, r.web, PW - 165, 165, 1.0, 0, 0.75, pivot=(330, 0))
-    lab = to_sprite(label_sprite(idx + 1, shot["label"]))
-    blit(img, lab, PW / 2 + 10, 250, min(1.0, 1000 / lab.shape[1]), -1.5)
-    blit(img, r.logo_small, 110, 92, 0.85)
+    img = vignette(top_band(r.photo(shot).crop(PW, PH, 0.82)), 0.55)
+    blit(img, r.web, PW - 165, 165, 1.0, 0, 0.5, pivot=(330, 0))
+    place_label(img, costume_label(idx + 1, shot["label"]), PW / 2, 250)
+    blit(img, r.logo_small, 100, 96, 0.85)
     return img
 
 
 def cover_slide(r):
-    img = vignette(still_bg("intro_night_scene.jpg", 0.35), 0.5)
-    blit(img, r.logo_mid, PW / 2, 220, 0.95)
-    blit(img, r.t_big, PW / 2, 560, 0.95, -2)
-    blit(img, r.t_sub, PW / 2, 735, 1.0, 1.5)
-    blit(img, r.t_cta, PW / 2, 880)
-    swipe = to_sprite(text_image("SWIPE TO MEET OUR LITTLE MONSTERS  >>", font(F_HORROR, 40), fill=(GOLD, ORANGE),
-                                 stroke=INK, stroke_w=4, shadow=0.8, pad=10))
-    blit(img, swipe, PW / 2, 1240)
+    img = vignette(still_bg("intro_night_scene.jpg", 0.4), 0.5)
+    blit(img, r.halo, PW / 2, 230, 1.0, 0, 0.8)
+    blit(img, r.logo_mid, PW / 2, 230, 0.95)
+    blit(img, r.t_big, PW / 2, 560, 0.95)
+    blit(img, r.t_sub, PW / 2, 735)
+    glass, txt = r.t_cta
+    glass.draw(img, PW / 2, 850)
+    blit(img, txt, PW / 2, 850)
+    swipe = to_sprite(flanked(lettering("SWIPE TO MEET OUR LITTLE MONSTERS", font(F_SANS, 30, 700), 8,
+                                        fill=(PEACH, PEACH), shadow=0.8), 60, 22))
+    blit(img, swipe, PW / 2, 1235)
     blit(img, r.bats[2], 880, 380, 0.7, 12)
     blit(img, r.bats[5], 190, 980, 0.5, -10)
     return img
 
 
 def end_slide(r):
-    img = vignette(still_bg("outro_haunted_bg.jpg", 0.12), 0.5)
-    blit(img, r.o_logo, PW / 2, 190, 0.78)
-    blit(img, r.o_l1, PW / 2, 420, 0.9)
-    blit(img, r.o_l2, PW / 2, 545, 0.9)
-    blit(img, r.o_tag, PW / 2, 650)
-    for spr, y in zip(r.o_pills, (790, 935, 1078)):
-        blit(img, spr, PW / 2, y)
-    blit(img, r.o_stay, PW / 2, 1215)
+    img = vignette(still_bg("outro_haunted_bg.jpg", 0.2), 0.5)
+    blit(img, r.halo, PW / 2, 175, 1.0, 0, 0.9)
+    blit(img, r.o_logo, PW / 2, 175, 0.72)
+    blit(img, r.o_l1, PW / 2, 375, 0.9)
+    blit(img, r.o_l2, PW / 2, 490, 0.85)
+    blit(img, r.o_tag, PW / 2, 605)
+    y = 670
+    for glass, icon, text in r.o_cards:
+        x0, y0 = glass.draw(img, PW / 2, y + glass.h / 2)
+        blit(img, icon, x0 + 72, y0 + glass.h / 2)
+        blit(img, text, x0 + 150 + text.shape[1] / 2, y0 + glass.h / 2 + 1)
+        y += glass.h + 20
+    blit(img, r.o_stay, PW / 2, y + 28)
+    blit(img, r.o_web, PW / 2, y + 82)
     blit(img, r.bats[3], 900, 330, 0.55, 10)
     return img
 
 
 def collage(r):
-    img = vignette(still_bg("intro_night_scene.jpg", 0.72), 0.4)
-    head = to_sprite(fit_width(text_image("HALLOWEEN COSTUME PARADE", font(F_HORROR, 60), fill=(GOLD, ORANGE),
-                                          stroke=INK, stroke_w=5, shadow=0.7, pad=10, glow=((255, 90, 20), 12, 1.0)),
-                               880))
-    blit(img, head, PW / 2 + 70, 72)
-    blit(img, r.logo_small, 90, 74, 0.62)
-    cols, gap, top = 5, 8, 136
-    tw = (PW - gap * (cols + 1)) // cols
-    th = (PH - top - 92 - gap * 5) // 5
+    img = vignette(still_bg("intro_night_scene.jpg", 0.7), 0.4)
+    head = to_sprite(fit_width(lettering("Halloween Costume Parade", font(F_GOTH, 92, 800), fill=(CREAM, PEACH),
+                                         glow=(NEON, 16, 1.0), shadow=0.8), 960))
+    blit(img, head, PW / 2, 92)
+    sub = to_sprite(flanked(lettering("COMMENT YOUR FAVOURITE NUMBER", font(F_SANS, 28, 700), 9,
+                                      fill=(WHITE, WHITE), shadow=0.8), 60, 22))
+    blit(img, sub, PW / 2, 188)
+    cols, margin, gap, top = 4, 40, 16, 236
+    tw = (PW - 2 * margin - gap * (cols - 1)) // cols
+    th = int(tw * 4 / 3)
     for i, shot in enumerate(SHOTS):
         c, rr = i % cols, i // cols
-        x, y = gap + c * (tw + gap), top + rr * (th + gap)
-        img[y:y + th, x:x + tw] = r.photo(shot).crop(tw, th, 0.7)
-        badge = to_sprite(fit_width(pumpkin_badge(i + 1, 92), 64))
-        blit(img, badge, x + 34, y + 34)
-    x0 = gap + (len(SHOTS) % cols) * (tw + gap)
-    y0 = top + (len(SHOTS) // cols) * (th + gap)
-    lines = [text_image(t, font(F_HORROR, 40), fill=(GOLD, ORANGE), stroke=INK, stroke_w=4, shadow=0, pad=2)
-             for t in ("COMMENT YOUR", "FAVE NUMBER!")]
-    cta = to_sprite(fit_width(drippy_pill(stack(lines, -6), SLIME, pad_x=24, pad_y=10, seed=13), PW - x0 - 20))
-    blit(img, cta, (x0 + PW) / 2, y0 + th / 2)
-    foot = to_sprite(text_image(f"{BRAND['web']}  •  {BRAND['phone']}  •  Grande Prairie, AB",
-                                font(F_BODY, 36, [800]), fill=(CREAM, CREAM), stroke=INK, stroke_w=3, shadow=0, pad=6))
-    blit(img, foot, PW / 2, PH - 46)
+        x, y = margin + c * (tw + gap) + tw / 2, top + rr * (th + gap) + th / 2
+        blit(img, to_sprite(photo_tile(r.photo(shot).crop(tw, th, 0.72), i + 1)), x, y)
+    foot = to_sprite(lettering(f"{BRAND['web']}   ·   {BRAND['phone']}   ·   Grande Prairie, AB",
+                               font(F_SANS, 28, 600), 2, fill=(CREAM, CREAM), shadow=0.8))
+    blit(img, foot, PW / 2, PH - 40)
     return img
 
 
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
+    for old in OUT.glob("carousel_*.jpg"):
+        old.unlink()
     r = Renderer()
     save(cover_slide(r), OUT / "carousel_01_cover.jpg")
     for k, name in enumerate(HEROES):

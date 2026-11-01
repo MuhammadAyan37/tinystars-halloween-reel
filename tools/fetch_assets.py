@@ -9,9 +9,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES = {
-    "brand/fonts/Nosifer-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/nosifer/Nosifer-Regular.ttf",
-    "brand/fonts/Eater-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/eater/Eater-Regular.ttf",
-    "brand/fonts/Baloo2.ttf": "https://github.com/google/fonts/raw/main/ofl/baloo2/Baloo2%5Bwght%5D.ttf",
+    "brand/fonts/GrenzeGotisch.ttf":
+        "https://github.com/google/fonts/raw/main/ofl/grenzegotisch/GrenzeGotisch%5Bwght%5D.ttf",
+    "brand/fonts/Cinzel.ttf": "https://github.com/google/fonts/raw/main/ofl/cinzel/Cinzel%5Bwght%5D.ttf",
+    "brand/fonts/Montserrat.ttf": "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat%5Bwght%5D.ttf",
     "models/face_detection_yunet_2023mar.onnx":
         "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",
     "brand/logo.png": "https://tinystars.ca/assets/images/logo/logo.png",

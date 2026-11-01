@@ -4,12 +4,12 @@
 
 | File | Use it for |
 |---|---|
-| `tinystars_halloween_reel.mp4` | The reel, with music and horror sound effects (Instagram Reels, Facebook Reels, TikTok) |
-| `tinystars_halloween_reel_small.mp4` | The same reel, smaller, for sending to a phone (upload the full one when you can) |
+| `tinystars_halloween_reel.mp4` | The reel: 24 seconds, full HD 1080×1920, with music and horror sound effects (Instagram Reels, Facebook Reels, TikTok) |
+| `tinystars_halloween_reel_phone.mp4` | The same reel, still full HD but a smaller file (27 MB) for sending to a phone and posting from there |
 | `tinystars_halloween_reel_nomusic.mp4` | The same reel with sound effects only (thunder, whooshes) and no music, if you'd rather add a trending sound inside the app |
 | `reel_cover.jpg` | Cover image for the reel (upload it as the cover on Instagram/Facebook) |
 | `post/carousel_01 ... carousel_10` | A 10-slide carousel post (Instagram + Facebook), in this order |
-| `post/all_costumes_collage.jpg` | All 22 costumes numbered on one image (Facebook post, Instagram Story, or a carousel slide) |
+| `post/all_costumes_collage.jpg` | All 12 costumes numbered on one image (Facebook post, Instagram Story, or a carousel slide) |
 
 The numbers are the same in the reel, the carousel and the collage, so "comment the number" works everywhere.
 
@@ -23,7 +23,7 @@ Our Tiny Stars brought their A-game this Halloween 🧙‍♀️🕷️🐥👑 
 
 👇 **Which one's YOUR favourite? Comment the number!** 👇
 
-A huge thank-you to all our families for joining the fun (yes, even the grown-ups dressed up! 🦄🌭)
+A huge thank-you to all our families for joining the fun 🧡
 
 ⭐ Now enrolling! Book a tour: tinystars.ca | 📞 (780) 230-1599
 📍 10629 West Side Drive, Grande Prairie, Alberta 🇨🇦
@@ -40,7 +40,7 @@ The cutest costume parade in Grande Prairie 🎃👻 Which number is your fave? 
 
 🎃 **Swipe to meet our little monsters!** 👻
 
-Halloween at Tiny Stars was a whole parade of cuteness 🧙‍♀️🐥🕷️👑 We picked 8 favourites for this post. See all 22 in our reel!
+Halloween at Tiny Stars was a whole parade of cuteness 🧙‍♀️🐥🕷️👑 We picked 8 favourites for this post. See all 12 in our reel!
 
 👇 **Comment the number of your favourite costume!** 👇
 
@@ -57,11 +57,11 @@ Children at Tiny Stars Daycare in Halloween costumes, including a witch, a baby 
 
 ## Posting notes
 
-- **Every face in the reel and the posts is blurred**: all 30 faces, kids and adults (checked by eye, photo by photo). The two Ghostface kids and the skull-mask costume already have their faces covered by their masks.
+- **Every face in the reel and the posts is blurred**, kids and adults (checked by eye, photo by photo). The two Ghostface kids and the skull-mask costume already have their faces covered by their masks.
 - **Music and sound effects:** "Ghosts of the Past" (instrumental) by melodyayresgriffiths, plus thunder, whoosh, glitch and witch-laugh effects, all from Pixabay. They're free for commercial use and need no credit, and none are flagged for Content ID, so Facebook/Instagram shouldn't mute them. A credit line is still a nice touch if you want one: `🎵 Music: "Ghosts of the Past" by melodyayresgriffiths (Pixabay)`.
 - **Business accounts and trending sounds:** Instagram limits business accounts to its royalty-free music library. To use one of those sounds, upload the `_nomusic` version and add the sound in the app.
 - **Cover:** on Instagram, tap "Edit cover" and upload `reel_cover.jpg`. Its title sits in the centre, so it still reads when the profile grid crops it.
 - **Safe zones:** all the text sits clear of the app buttons and caption area at the bottom and right edge.
-- **Timing:** post tonight while it's still Halloween, then share the reel to your Story with a poll sticker ("Which costume wins?") for extra reach.
+- **Timing:** Halloween was yesterday, so post today while it still feels fresh, then share the reel to your Story with a poll sticker ("Which costume wins?") for extra reach.
 - **AI backgrounds:** the haunted-house intro and the haunted-classroom outro are AI-generated with OpenGen. They're illustrated scenes with no people in them. All the photos of the kids are real and only colour-graded. Because the scenes are clearly cartoon-style, a label probably isn't required, but switching on Instagram's "AI info" and TikTok's "AI-generated content" toggle is the safe choice.
 - The labels use playful costume descriptions rather than character names (for example "Web Slinger" and "Ice Princess"), which keeps the business page clear of trademarked names.
