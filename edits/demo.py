@@ -9,9 +9,10 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from content import END, SHOTS, TITLE  # noqa: E402
-from render import (CREAM, DEEP, GOLD, INK, MAGENTA, ORANGE, PURPLE, VIOLET, WHITE, bat_image, blit,  # noqa: E402
-                    fit_width, font, label_sprite, logo_image, pill_image, sparkle_image, text_image, to_sprite)
+from content import SHOTS, TITLE  # noqa: E402
+from render import (BLOOD, DEEP, F_DRIP, F_HORROR, GOLD, INK, ORANGE, PURPLE, SLIME, WHITE, bat_image, blit,  # noqa: E402
+                    bolt_image, cobweb_image, drippy_pill, fit_width, font, label_sprite, logo_image, periodic_noise,
+                    text_image, to_sprite)
 
 ROOT = Path(__file__).resolve().parent.parent
 DW, DH = 1600, 900
@@ -19,26 +20,25 @@ DW, DH = 1600, 900
 
 def main():
     y = np.linspace(0, 1, DH)[:, None, None]
-    img = (np.array(DEEP) * (1 - y) + np.array(PURPLE) * 0.55 * y) / 255.0
+    img = (np.array(DEEP) * (1 - y) + np.array(PURPLE) * 0.5 * y) / 255.0
     img = np.repeat(img, DW, axis=1).astype(np.float32)
-    rng = np.random.default_rng(3)
-    sparks = [to_sprite(sparkle_image(r, c)) for r, c in [(22, GOLD), (16, CREAM), (18, (255, 150, 205))]]
-    for _ in range(26):
-        blit(img, sparks[rng.integers(0, 3)], rng.uniform(20, DW - 20), rng.uniform(20, DH - 20), rng.uniform(0.4, 1))
-    blit(img, to_sprite(logo_image(230)), 400, 170)
-    blit(img, to_sprite(fit_width(text_image(TITLE["big"].upper(), font("Creepster-Regular.ttf", 170),
-                                             fill=(GOLD, ORANGE), stroke_w=8, extrude=12, extrude_col=PURPLE), 760)),
-         400, 400, 1, -2)
-    blit(img, to_sprite(text_image(TITLE["sub"].upper(), font("LuckiestGuy-Regular.ttf", 84), fill=(WHITE, CREAM),
-                                   stroke_w=7, extrude=9, extrude_col=MAGENTA)), 400, 560, 1, 1.5)
-    cta = text_image(TITLE["cta"], font("Baloo2.ttf", 46, [800]), fill=(WHITE, WHITE), stroke_w=0, shadow=0, pad=2)
-    blit(img, to_sprite(pill_image(cta, [VIOLET, MAGENTA], pad_x=34, pad_y=6)), 400, 690)
+    fog = np.array(Image.fromarray((periodic_noise(DH // 4, DW // 4, 3) * 255).astype(np.uint8)).resize((DW, DH)))
+    a = (np.clip(fog / 255.0 - 0.35, 0, 1) * 0.7 * np.clip((y[..., 0] - 0.45) / 0.55, 0, 1))[..., None]
+    img = img * (1 - a) + np.array([0.6, 0.55, 0.75], np.float32) * a
+    blit(img, to_sprite(bolt_image(1, 600)), 760, 330, 0.8, -8, 0.8)
+    blit(img, to_sprite(cobweb_image()), DW - 165, 165, 1.0, 0, 0.8)
+    blit(img, to_sprite(logo_image(230)), 400, 150)
+    blit(img, to_sprite(fit_width(text_image(TITLE["big"].upper(), font(F_DRIP, 112), fill=(GOLD, BLOOD), stroke=INK,
+                                             stroke_w=7, extrude=10, extrude_col=(60, 10, 70),
+                                             glow=((255, 90, 20), 18, 1.2)), 780)), 400, 400, 1, -2)
+    blit(img, to_sprite(text_image(TITLE["sub"].upper(), font(F_HORROR, 78), fill=(WHITE, (220, 210, 235)), stroke=INK,
+                                   stroke_w=6, extrude=7, extrude_col=PURPLE, glow=((130, 70, 255), 14, 1.1))),
+         400, 560, 1, 1.5)
+    cta = text_image(TITLE["cta"].upper(), font(F_HORROR, 42), fill=(GOLD, ORANGE), stroke=INK, stroke_w=4, shadow=0, pad=4)
+    blit(img, to_sprite(drippy_pill(cta, SLIME, pad_x=30, pad_y=8, seed=5)), 400, 700)
     for k, i in enumerate((0, 3, 6, 21)):
-        blit(img, to_sprite(label_sprite(i + 1, SHOTS[i]["label"])), 1180, 150 + k * 150, 0.82, -2 + k % 2 * 2.5)
-    end = text_image(END["cta"].upper() + "!", font("LuckiestGuy-Regular.ttf", 48), fill=(GOLD, (255, 214, 90)),
-                     stroke_w=5, extrude=4, extrude_col=INK)
-    blit(img, to_sprite(end), 1180, 790)
-    blit(img, to_sprite(bat_image(0.6)), 760, 120, 0.7, -10)
+        blit(img, to_sprite(label_sprite(i + 1, SHOTS[i]["label"])), 1170, 150 + k * 165, 0.85, -2 + k % 2 * 2.5)
+    blit(img, to_sprite(bat_image(0.6)), 1450, 820, 0.6, -10)
     blit(img, to_sprite(bat_image(-0.4)), 120, 800, 0.5, 12)
     (ROOT / "docs").mkdir(exist_ok=True)
     Image.fromarray((np.clip(img, 0, 1) * 255).astype(np.uint8)).save(ROOT / "docs" / "demo.png", optimize=True)

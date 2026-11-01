@@ -15,121 +15,106 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from content import BRAND, END, SHOTS, TITLE  # noqa: E402
-from render import (CREAM, DEEP, GOLD, INK, MAGENTA, ORANGE, PURPLE, VIOLET, WHITE, Photo, Renderer,  # noqa: E402
-                    blit, fit_width, font, label_sprite, logo_image, pill_image, text_image, to_sprite)
+from content import BRAND, SHOTS  # noqa: E402
+from render import (F_BODY, F_HORROR, GOLD, INK, OPENGEN, ORANGE, SLIME, CREAM, Renderer, blit,  # noqa: E402
+                    drippy_pill, fit_width, font, label_sprite, pumpkin_badge, stack, text_image, to_sprite)
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "exports" / "post"
 PW, PH = 1080, 1350
 HEROES = ["IMG_8302", "IMG_8187", "IMG_8030", "IMG_8309", "IMG_8386", "IMG_8202", "IMG_8335", "IMG_8274"]
-DEEPF = np.array(DEEP, np.float32) / 255
 
 
-def crop(p, w, h, zoom=0.82):
-    """Crop a framed photo to w:h around the kid(s) and resize to w x h (float RGB 0..1)."""
-    ch = min(p.win_h * zoom, p.hs)
-    cw = ch * w / h
-    if cw > p.ws:
-        cw, ch = p.ws, p.ws * h / w
-    cx = min(max(p.cx, cw / 2), p.ws - cw / 2)
-    cy = min(max(p.cy, ch / 2), p.hs - ch / 2)
-    x0, y0 = int(cx - cw / 2), int(cy - ch / 2)
-    im = p.img[y0:y0 + int(ch), x0:x0 + int(cw)]
-    return cv2.resize(im, (w, h), interpolation=cv2.INTER_AREA).astype(np.float32) / 255.0
+def still_bg(name, darken=0.0):
+    """An OpenGen still, upscaled to 1080 wide and cropped to 4:5 from the middle."""
+    im = cv2.cvtColor(cv2.imread(str(OPENGEN / name)), cv2.COLOR_BGR2RGB)
+    h = round(im.shape[0] * PW / im.shape[1])
+    im = cv2.resize(im, (PW, h), interpolation=cv2.INTER_CUBIC).astype(np.float32) / 255.0
+    y0 = (h - PH) // 2
+    im = im[y0:y0 + PH]
+    return im * (1 - darken)
 
 
-def darken(img, top=0.55, top_h=480, bottom=0.0, bottom_h=300):
-    h = img.shape[0]
-    y = np.arange(h, dtype=np.float32)[:, None, None]
-    a = top * (1 - np.clip(y / top_h, 0, 1)) ** 1.6
-    a = 1 - (1 - a) * (1 - bottom * np.clip((y - (h - bottom_h)) / bottom_h, 0, 1) ** 1.4)
-    return img * (1 - a) + DEEPF * a
+def vignette(img, k=0.5):
+    h, w = img.shape[:2]
+    y, x = np.mgrid[0:h, 0:w].astype(np.float32)
+    r = np.sqrt(((x - w / 2) / (w * 0.62)) ** 2 + ((y - h / 2) / (h * 0.62)) ** 2)
+    a = np.clip(r - 0.5, 0, 1)[..., None] * k
+    return img * (1 - a) + np.array([0.07, 0.02, 0.11], np.float32) * a
+
+
+def top_band(img, k=0.6, hgt=460):
+    y = np.arange(img.shape[0], dtype=np.float32)[:, None, None]
+    a = k * (1 - np.clip(y / hgt, 0, 1)) ** 1.6
+    return img * (1 - a) + np.array([0.07, 0.02, 0.11], np.float32) * a
 
 
 def save(img, path):
     Image.fromarray((np.clip(img, 0, 1) * 255 + 0.5).astype(np.uint8)).save(path, quality=93, subsampling=0)
 
 
-def numbered(i):
-    return i + 1, SHOTS[i]
-
-
-def hero_slide(r, idx, photos):
-    num, shot = numbered(idx)
-    img = darken(crop(photos[shot["photo"]], PW, PH), 0.6, 520, 0.35, 260)
-    blit(img, to_sprite(label_sprite(num, shot["label"])), PW / 2 + 10, 250, min(1.0, 990 / 1100), -2)
-    blit(img, r.logo_small, 110, 92, 0.8)
+def hero_slide(r, idx):
+    shot = SHOTS[idx]
+    img = r.photo(shot).crop(PW, PH, 0.82)
+    img = vignette(top_band(img), 0.55)
+    blit(img, r.web, PW - 165, 165, 1.0, 0, 0.75, pivot=(330, 0))
+    lab = to_sprite(label_sprite(idx + 1, shot["label"]))
+    blit(img, lab, PW / 2 + 10, 250, min(1.0, 1000 / lab.shape[1]), -1.5)
+    blit(img, r.logo_small, 110, 92, 0.85)
     return img
 
 
-def wall_bg(r, w, h, bright=0.34):
-    wh, ww = r.wall.shape[:2]
-    y0, x0 = int(wh * 0.25), int((ww - w) / 2)
-    return r.wall[y0:y0 + h, x0:x0 + w] * bright + DEEPF * (1 - bright)
-
-
 def cover_slide(r):
-    img = wall_bg(r, PW, PH, 0.42)
-    blit(img, r.title_logo, PW / 2, 270, 1.05)
-    blit(img, r.t_big, PW / 2, 600, 1.0, -2)
-    blit(img, r.t_sub, PW / 2, 800, 1.0, 1.5)
-    blit(img, r.t_cta, PW / 2, 950, 1.15)
-    swipe = to_sprite(text_image("SWIPE TO MEET OUR LITTLE MONSTERS  >>", font("LuckiestGuy-Regular.ttf", 44),
-                                 fill=(GOLD, (255, 214, 90)), stroke_w=5, extrude=4, extrude_col=INK, pad=8))
-    blit(img, swipe, PW / 2, 1200, 1.0)
-    for x, y, k, s in [(120, 470, 0, 1.0), (960, 520, 2, 0.8), (150, 1080, 4, 0.7), (930, 1090, 1, 0.9),
-                       (900, 180, 3, 1.0)]:
-        blit(img, r.sparkles[k], x, y, s)
-    blit(img, r.bats[2], 880, 330, 0.75, 12)
-    blit(img, r.bats[5], 200, 760, 0.55, -10)
+    img = vignette(still_bg("intro_night_scene.jpg", 0.35), 0.5)
+    blit(img, r.logo_mid, PW / 2, 220, 0.95)
+    blit(img, r.t_big, PW / 2, 560, 0.95, -2)
+    blit(img, r.t_sub, PW / 2, 735, 1.0, 1.5)
+    blit(img, r.t_cta, PW / 2, 880)
+    swipe = to_sprite(text_image("SWIPE TO MEET OUR LITTLE MONSTERS  >>", font(F_HORROR, 40), fill=(GOLD, ORANGE),
+                                 stroke=INK, stroke_w=4, shadow=0.8, pad=10))
+    blit(img, swipe, PW / 2, 1240)
+    blit(img, r.bats[2], 880, 380, 0.7, 12)
+    blit(img, r.bats[5], 190, 980, 0.5, -10)
     return img
 
 
 def end_slide(r):
-    img = wall_bg(r, PW, PH, 0.30)
-    blit(img, r.logo_big, PW / 2, 230, 0.95)
-    blit(img, r.e_happy, PW / 2, 470)
-    blit(img, r.e_hall, PW / 2, 610)
-    blit(img, r.e_from, PW / 2, 755)
-    blit(img, r.e_cta, PW / 2, 900)
-    blit(img, r.e_enrol, PW / 2, 1065)
-    blit(img, r.e_phone, PW / 2, 1150)
-    blit(img, r.e_addr, PW / 2, 1222)
-    for x, y, k, s in [(110, 400, 0, 0.9), (980, 360, 2, 0.8), (90, 1000, 1, 0.8), (990, 980, 4, 0.7)]:
-        blit(img, r.sparkles[k], x, y, s)
-    blit(img, r.bats[3], 900, 120, 0.6, 10)
+    img = vignette(still_bg("outro_haunted_bg.jpg", 0.12), 0.5)
+    blit(img, r.o_logo, PW / 2, 190, 0.78)
+    blit(img, r.o_l1, PW / 2, 420, 0.9)
+    blit(img, r.o_l2, PW / 2, 545, 0.9)
+    blit(img, r.o_tag, PW / 2, 650)
+    for spr, y in zip(r.o_pills, (790, 935, 1078)):
+        blit(img, spr, PW / 2, y)
+    blit(img, r.o_stay, PW / 2, 1215)
+    blit(img, r.bats[3], 900, 330, 0.55, 10)
     return img
 
 
-def collage(r, photos):
-    img = np.ones((PH, PW, 3), np.float32) * DEEPF
-    head = to_sprite(fit_width(text_image("HALLOWEEN COSTUME PARADE", font("LuckiestGuy-Regular.ttf", 64),
-                                          fill=(GOLD, ORANGE), stroke_w=6, extrude=6, extrude_col=PURPLE,
-                                          pad=10), 900))
-    blit(img, head, PW / 2 + 60, 72)
-    blit(img, r.logo_small, 92, 76, 0.62)
-    cols, rows, gap, top = 5, 5, 8, 136
+def collage(r):
+    img = vignette(still_bg("intro_night_scene.jpg", 0.72), 0.4)
+    head = to_sprite(fit_width(text_image("HALLOWEEN COSTUME PARADE", font(F_HORROR, 60), fill=(GOLD, ORANGE),
+                                          stroke=INK, stroke_w=5, shadow=0.7, pad=10, glow=((255, 90, 20), 12, 1.0)),
+                               880))
+    blit(img, head, PW / 2 + 70, 72)
+    blit(img, r.logo_small, 90, 74, 0.62)
+    cols, gap, top = 5, 8, 136
     tw = (PW - gap * (cols + 1)) // cols
-    th = (PH - top - 92 - gap * rows) // rows
-    badge_font = font("LuckiestGuy-Regular.ttf", 34)
+    th = (PH - top - 92 - gap * 5) // 5
     for i, shot in enumerate(SHOTS):
         c, rr = i % cols, i // cols
         x, y = gap + c * (tw + gap), top + rr * (th + gap)
-        img[y:y + th, x:x + tw] = crop(photos[shot["photo"]], tw, th, 0.7)
-        num = to_sprite(pill_image(text_image(str(i + 1), badge_font, fill=(INK, INK), stroke_w=0, shadow=0, pad=0),
-                                   [GOLD, (255, 214, 90)], pad_x=12, pad_y=4, border=3))
-        blit(img, num, x + 34, y + 30, 0.9)
-    # last row: the spare cells get the call to action
+        img[y:y + th, x:x + tw] = r.photo(shot).crop(tw, th, 0.7)
+        badge = to_sprite(fit_width(pumpkin_badge(i + 1, 92), 64))
+        blit(img, badge, x + 34, y + 34)
     x0 = gap + (len(SHOTS) % cols) * (tw + gap)
     y0 = top + (len(SHOTS) // cols) * (th + gap)
-    cta = to_sprite(fit_width(pill_image(text_image("COMMENT YOUR FAVE #", font("LuckiestGuy-Regular.ttf", 40),
-                                                    fill=(WHITE, CREAM), stroke_w=4, extrude=3, extrude_col=INK,
-                                                    shadow=0, pad=4), [VIOLET, MAGENTA], pad_x=24, pad_y=12),
-                              PW - x0 - 20))
+    lines = [text_image(t, font(F_HORROR, 40), fill=(GOLD, ORANGE), stroke=INK, stroke_w=4, shadow=0, pad=2)
+             for t in ("COMMENT YOUR", "FAVE NUMBER!")]
+    cta = to_sprite(fit_width(drippy_pill(stack(lines, -6), SLIME, pad_x=24, pad_y=10, seed=13), PW - x0 - 20))
     blit(img, cta, (x0 + PW) / 2, y0 + th / 2)
     foot = to_sprite(text_image(f"{BRAND['web']}  •  {BRAND['phone']}  •  Grande Prairie, AB",
-                                font("Baloo2.ttf", 36, [800]), fill=(CREAM, CREAM), stroke_w=0, shadow=0, pad=6))
+                                font(F_BODY, 36, [800]), fill=(CREAM, CREAM), stroke=INK, stroke_w=3, shadow=0, pad=6))
     blit(img, foot, PW / 2, PH - 46)
     return img
 
@@ -137,17 +122,15 @@ def collage(r, photos):
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     r = Renderer()
-    photos = {s["photo"]: Photo(s) for s in SHOTS}
     save(cover_slide(r), OUT / "carousel_01_cover.jpg")
     for k, name in enumerate(HEROES):
         idx = next(i for i, s in enumerate(SHOTS) if s["photo"] == name)
-        save(hero_slide(r, idx, photos), OUT / f"carousel_{k + 2:02d}_{SHOTS[idx]['label'].lower().replace(' ', '_')}.jpg")
+        save(hero_slide(r, idx), OUT / f"carousel_{k + 2:02d}_{SHOTS[idx]['label'].lower().replace(' ', '_')}.jpg")
     save(end_slide(r), OUT / "carousel_10_end.jpg")
-    save(collage(r, photos), OUT / "all_costumes_collage.jpg")
-    # reel cover: the title card, sharp photo behind it
-    r.prev_frame = None
-    title = next(s for s in r.segs if s["kind"] == "title")
-    save(r.frame(title["t1"] - 0.45), ROOT / "exports" / "reel_cover.jpg")
+    save(collage(r), OUT / "all_costumes_collage.jpg")
+    # reel cover: the finished title card
+    title = r.seg("title")
+    save(r.frame(title["t1"] - 0.35), ROOT / "exports" / "reel_cover.jpg")
     print("posts written to", OUT)
 
 

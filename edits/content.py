@@ -13,48 +13,58 @@ BRAND = {
 
 TITLE = {"kicker": "Tiny Stars", "big": "Halloween", "sub": "Costume Parade", "cta": "Pick your favourite!"}
 
+# the cold open before the music starts
+COLD = {"line1": "Something spooky", "line2": "happened at..."}
+
 # photo: file stem in work/jpg, label: costume name, beats: on-screen time,
-# focus: optional (x, y) crop centre as fractions of the photo (defaults to the faces / centre)
+# fx: the transition INTO this shot (lightning, glitch, slime, ghost, flicker, fog, zoom)
 SHOTS = [
-    {"photo": "IMG_8302", "label": "Ghost Buster", "beats": 4},
-    {"photo": "IMG_8187", "label": "Little Witch", "beats": 2},
-    {"photo": "IMG_8379", "label": "Web Slinger", "beats": 2},
-    {"photo": "IMG_8030", "label": "Baby Chick", "beats": 4},
-    {"photo": "IMG_8113", "label": "Busy Bee", "beats": 2},
+    {"photo": "IMG_8302", "label": "Ghost Buster", "beats": 4, "fx": "lightning"},
+    {"photo": "IMG_8187", "label": "Little Witch", "beats": 2, "fx": "glitch"},
+    {"photo": "IMG_8379", "label": "Web Slinger", "beats": 2, "fx": "flicker"},
+    {"photo": "IMG_8030", "label": "Baby Chick", "beats": 4, "fx": "slime"},
+    {"photo": "IMG_8113", "label": "Busy Bee", "beats": 2, "fx": "ghost"},
     # no face to blur (the mask covers it), so frame on the mask instead
-    {"photo": "IMG_8386", "label": "Skull King", "beats": 2, "frame_box": [1137, 882, 139, 179]},
-    {"photo": "IMG_8309", "label": "Ice Princess", "beats": 4},
-    {"photo": "IMG_8059", "label": "Construction Pup", "beats": 2},
-    {"photo": "IMG_8053", "label": "Tiny Skeleton", "beats": 2},
-    {"photo": "IMG_8227", "label": "Little Monster", "beats": 2},
-    {"photo": "IMG_8022", "label": "Super Plumber", "beats": 2},
-    {"photo": "IMG_8202", "label": "Little Piglet", "beats": 4},
-    {"photo": "IMG_8176", "label": "Baby Dragon", "beats": 2},
-    {"photo": "IMG_8335", "label": "Rapunzel", "beats": 2},
-    {"photo": "IMG_8191", "label": "Cowboy", "beats": 2},
-    {"photo": "IMG_8131", "label": "Firefighter", "beats": 2},
-    {"photo": "IMG_8359", "label": "Kitty Cat", "beats": 2},
-    {"photo": "IMG_8224", "label": "Sleeping Beauty", "beats": 2},
-    {"photo": "IMG_8367", "label": "Midnight Hero", "beats": 2},
-    {"photo": "IMG_8049", "label": "Blue Alien", "beats": 2},
-    {"photo": "IMG_8306", "label": "Skeleton Crew", "beats": 4},
+    {"photo": "IMG_8386", "label": "Skull King", "beats": 2, "fx": "glitch", "frame_box": [1137, 882, 139, 179]},
+    {"photo": "IMG_8309", "label": "Ice Princess", "beats": 4, "fx": "lightning"},
+    {"photo": "IMG_8059", "label": "Construction Pup", "beats": 2, "fx": "zoom"},
+    {"photo": "IMG_8053", "label": "Tiny Skeleton", "beats": 2, "fx": "flicker"},
+    {"photo": "IMG_8227", "label": "Little Monster", "beats": 2, "fx": "ghost"},
+    {"photo": "IMG_8022", "label": "Super Plumber", "beats": 2, "fx": "glitch"},
+    {"photo": "IMG_8202", "label": "Little Piglet", "beats": 4, "fx": "slime"},
+    {"photo": "IMG_8176", "label": "Baby Dragon", "beats": 2, "fx": "zoom"},
+    {"photo": "IMG_8335", "label": "Rapunzel", "beats": 2, "fx": "ghost"},
+    {"photo": "IMG_8191", "label": "Cowboy", "beats": 2, "fx": "flicker"},
+    {"photo": "IMG_8131", "label": "Firefighter", "beats": 2, "fx": "glitch"},
+    {"photo": "IMG_8359", "label": "Kitty Cat", "beats": 2, "fx": "zoom"},
+    {"photo": "IMG_8224", "label": "Sleeping Beauty", "beats": 2, "fx": "ghost"},
+    {"photo": "IMG_8367", "label": "Midnight Hero", "beats": 2, "fx": "flicker"},
+    {"photo": "IMG_8049", "label": "Blue Alien", "beats": 2, "fx": "glitch"},
+    {"photo": "IMG_8306", "label": "Skeleton Crew", "beats": 4, "fx": "lightning"},
     # big kids: widen and lower the frame so both Ghostface kids on the floor fit
-    {"photo": "IMG_8274", "label": "Spooky Squad", "beats": 4, "zoom": 1.22, "dx": 0.05, "face_pos": 0.33},
+    {"photo": "IMG_8274", "label": "Spooky Squad", "beats": 4, "fx": "slime",
+     "zoom": 1.22, "dx": 0.05, "face_pos": 0.33},
 ]
 
 FAMILY = {
     "line": "Even the grown-ups dressed up!",
     "shots": [
-        {"photo": "IMG_8002", "beats": 4},
-        {"photo": "IMG_8252", "beats": 4},
+        {"photo": "IMG_8002", "beats": 4, "fx": "fog"},
+        {"photo": "IMG_8252", "beats": 4, "fx": "ghost"},
     ],
 }
 
-END = {
-    "big": "Happy Halloween!",
-    "sub": "from all of us at Tiny Stars",
-    "cta": "Comment your favourite number",
-    "enrol": "Now enrolling - book a tour",
+# the numbered grid that asks for comments
+VOTE = {"big": "Which one wins?", "sub": "Comment the number below!", "beats": 8, "fx": "slime"}
+
+# the closing card on the haunted classroom
+OUTRO = {
+    "line1": "Thanks for",
+    "line2": "Watching",
+    "tag": "See you in our next adventure...",
+    "stay": "Stay connected with our little big family",
+    "beats": 12,
+    "fx": "fog",
 }
 
 # Photos looked at but not used (kept here so the choice is easy to revisit)

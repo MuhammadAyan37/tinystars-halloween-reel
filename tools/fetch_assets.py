@@ -9,9 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FILES = {
-    "brand/fonts/Creepster-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/creepster/Creepster-Regular.ttf",
-    "brand/fonts/LuckiestGuy-Regular.ttf":
-        "https://github.com/google/fonts/raw/main/apache/luckiestguy/LuckiestGuy-Regular.ttf",
+    "brand/fonts/Nosifer-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/nosifer/Nosifer-Regular.ttf",
+    "brand/fonts/Eater-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/eater/Eater-Regular.ttf",
     "brand/fonts/Baloo2.ttf": "https://github.com/google/fonts/raw/main/ofl/baloo2/Baloo2%5Bwght%5D.ttf",
     "models/face_detection_yunet_2023mar.onnx":
         "https://github.com/opencv/opencv_zoo/raw/main/models/face_detection_yunet/face_detection_yunet_2023mar.onnx",

@@ -1,15 +1,20 @@
 # Tiny Stars Halloween Costume Parade reel
 
-Code that turns a folder of Halloween photo-booth pictures from [Tiny Stars Daycare](https://tinystars.ca) (Grande Prairie, Alberta) into a 38-second vertical reel for Instagram, Facebook and TikTok, plus a matching carousel and collage post. **Every face is blurred**, kids and parents alike, and every cut lands on the beat of the music.
+Code that turns a folder of Halloween photo-booth pictures from [Tiny Stars Daycare](https://tinystars.ca) (Grande Prairie, Alberta) into a 45-second horror-themed vertical reel for Instagram, Facebook and TikTok, plus a matching carousel and collage post. **Every face is blurred**, kids and parents alike, and every cut lands on the beat of the music.
 
-![The reel's graphics: title, numbered costume labels and call to action](docs/demo.png)
+![The reel's graphics: dripping horror title, pumpkin-numbered costume labels and call to action](docs/demo.png)
 
 *The graphics on their own. The finished reel puts these over the costume photos.*
 
 ## What it makes
 
-- **The reel** (1080×1920, 30 fps, H.264 + AAC, normalised to −14 LUFS): an animated title, then 22 numbered costumes with Ken Burns motion, beat-synced punch and whip transitions, a "grown-ups dressed up too" section, and an end card with a "comment your favourite number" call to action and enrolment details.
-- **A no-music version**, for adding a trending sound inside the app.
+- **The reel** (1080×1920, 30 fps, H.264 + AAC, normalised to −14 LUFS):
+  - a **cold open**: thunder and lightning over an animated haunted-house scene, with "Something spooky happened at..." flickering in before the logo
+  - a **title slam** on the first beat (dripping HALLOWEEN, COSTUME PARADE)
+  - **22 numbered costumes**, joined by **horror transitions**: lightning strike, RGB glitch, failing-light flicker, purple slime drip, ghost after-image, zoom punch and fog, each with its own sound effect
+  - a "grown-ups dressed up too" section and a numbered **vote grid**
+  - an animated **"Thanks for Watching"** outro in a haunted classroom: swaying glowing ghosts, rolling mist, a lightning strike, and the contact stickers from the daycare's own Halloween card
+- **A no-music version** (sound effects only), for adding a trending sound inside the app.
 - **A 10-slide 4:5 carousel**, a numbered collage of all 22 costumes, and a reel cover.
 
 ## Privacy first
@@ -22,7 +27,12 @@ The photos, the face boxes and everything rendered from them stay out of git (se
 
 ## Run it
 
-You need Python 3.12, [uv](https://docs.astral.sh/uv/) and `ffmpeg` on your PATH. Put the HEIC/JPG photos in `source/drive_raw/` and the music file in `source/music/`.
+You need Python 3.12, [uv](https://docs.astral.sh/uv/) and `ffmpeg` on your PATH. None of the media is in the repo. Put these back first:
+
+- `source/drive_raw/`: the HEIC/JPG photos
+- `source/music/ghosts_of_the_past_171666.mp3` and `source/sfx/*.mp3`: thunder, impact, whoosh, ghost_whoosh, glitch, riser, witch, hit (all from Pixabay)
+- `source/brand_ref/tinystars_thanks_for_watching.png`: the daycare's Halloween end card, which the outro stickers are cut from
+- `source/opengen/`: `intro_scene.mp4`, `intro_night_scene.jpg`, `outro_haunted.mp4` and `outro_haunted_bg.jpg`, generated with OpenGen (Nano Banana 2.1 for the stills, Veo 3.1 Lite for the clips)
 
 ```bash
 uv venv --python 3.12 .venv
@@ -32,20 +42,22 @@ uv pip install --python .venv/Scripts/python.exe -r requirements.txt
 .venv/Scripts/python.exe -I edits/detect_faces.py     # face boxes -> work/faces.json, review images
 .venv/Scripts/python.exe -I edits/review_faces.py     # 2x2 sheets for checking faces by eye
 .venv/Scripts/python.exe -I edits/blur_faces.py       # full-resolution blurred photos
+.venv/Scripts/python.exe -I edits/cut_stickers.py     # logo + contact stickers from the end card
 .venv/Scripts/python.exe -I edits/stills.py           # layout check frames
 .venv/Scripts/python.exe -I edits/render.py           # exports/tinystars_halloween_reel.mp4
 .venv/Scripts/python.exe -I edits/render.py --no-music
 .venv/Scripts/python.exe -I edits/posts.py            # carousel, collage, reel cover
 ```
 
-The photo order, the costume labels, the timing (in beats) and the end-card text all live in `edits/content.py`.
+The photo order, the costume labels, each cut's transition, the timing (in beats) and the outro text all live in `edits/content.py`.
 
 ## Tech stack
 
 - **Python** with NumPy, OpenCV (YuNet face detection, warping, compositing) and Pillow (lettering and graphics, `pillow-heif` for iPhone photos)
 - **FFmpeg** for H.264/AAC encoding and two-pass EBU R128 loudness normalisation
-- **Fonts:** Creepster, Luckiest Guy and Baloo 2 from Google Fonts (OFL / Apache 2.0)
-- **Music:** "Ghosts of the Past" by melodyayresgriffiths on [Pixabay](https://pixabay.com/music/scary-childrens-tunes-ghosts-of-the-past-instrumental-halloween-autumn-spooky-upbeat-boppy-171666/) (Pixabay Content License, no Content ID)
+- **Fonts:** Nosifer (dripping titles), Eater (horror lettering) and Baloo 2 from Google Fonts (OFL)
+- **Music and sound effects:** "Ghosts of the Past" by melodyayresgriffiths on [Pixabay](https://pixabay.com/music/scary-childrens-tunes-ghosts-of-the-past-instrumental-halloween-autumn-spooky-upbeat-boppy-171666/), plus Pixabay sound effects (Pixabay Content License, no Content ID)
+- **AI backgrounds:** [OpenGen](https://opengen.ai) (Nano Banana 2.1 stills, Veo 3.1 Lite image-to-video) for the haunted house and the haunted classroom. No child appears in any generated footage.
 
 ## License
 
