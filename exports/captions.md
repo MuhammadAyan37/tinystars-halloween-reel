@@ -6,9 +6,11 @@ The newest video: Halloween week at Tiny Stars, told like a film trailer. Filmed
 
 | File | Use it for |
 |---|---|
-| `recap_last_week.mp4` | The film: 25 seconds, full HD 1080×1920, with music and sound effects. It's 28 MB, so this same file works from a computer or a phone. |
+| `recap_last_week.mp4` | The film: 25 seconds, full HD 1080×1920, with music and sound effects. It's 27 MB, so this same file works from a computer or a phone. |
 | `recap_last_week_nomusic.mp4` | Sound effects and a real laugh from the day, no music, if you'd rather add a sound inside the app |
-| `recap_cover.jpg` | Cover image: the "Recap of Last Week" title with the hanging skeleton beside it |
+| `recap_last_week_tv.mp4` | The same film laid out for a TV: 1920×1080 (16:9), with the logo and contact details beside it |
+| `recap_cover.jpg` | Cover image: the "Recap of Last Week" title in a flashlight beam |
+| `v1_first_song/` | The earlier version of all of these, with the costume reel's song and the first intro and outro |
 
 ## Instagram Reel / Facebook Reel caption
 
@@ -39,7 +41,8 @@ A recap of Halloween week at Tiny Stars Daycare: decorated hallways with ghosts,
 
 - **Every face is blurred**, kids and adults, tracked through each clip frame by frame and checked by eye.
 - **All real footage:** apart from the graphics, everything is your own video and photos. No AI-generated scenes, so no AI label is needed.
-- **Music:** the same track as the costume reel, "Ghosts of the Past" by melodyayresgriffiths (Pixabay), free for commercial use with no Content ID. The sound effects are from Pixabay or made for this video.
+- **Music:** a different song from the costume reel: "A Cute Ghost Story" by MMAudio (Pixabay), free for commercial use. It wasn't flagged for Content ID when checked on Pixabay on October 31, 2026. A credit is optional: `🎵 Music: "A Cute Ghost Story" by MMAudio (Pixabay)`. The sound effects are from Pixabay or made for this video.
+- **On the TV:** play `recap_last_week_tv.mp4`. It's standard H.264 + AAC, so copy it to a USB stick (FAT32 is the safest format) and open it with the TV's media player. On a Roku TV that's the free Roku Media Player app.
 - **Upload quality:** the settings further down this page apply here too, especially Instagram's "Upload at highest quality".
 - **Costume names** are playful descriptions, not character names, which keeps the business page clear of trademarks.
 

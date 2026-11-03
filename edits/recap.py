@@ -1,9 +1,10 @@
 """Render "Recap of Last Week": the Tiny Stars Halloween week as a 25-second film trailer, 1080x1920, 30 fps.
 
-The story runs dark to bright. Act one walks the haunted halls at dusk with the music held back behind a filter.
-A zoom through the wreath lands on the music lifting, the lights come up and the kids take over: real footage in
-slow motion, then each star freezes into a cut-out sticker with a movie credit. A wall of costumes scrolls
-on the beat and slows into the closing card.
+The story runs dark to bright. It opens in a dark classroom where a flashlight finds a hanging skeleton and lights up the
+title, then walks the haunted halls at dusk while the song is still quiet. A dive through the wreath lands on the band
+coming in, the lights come up and the kids take over: real footage, then each star freezes into a cut-out sticker with a
+movie credit. A wall of costumes scrolls on the beat, a star wipe opens the closing card, and the cast hop in for a
+curtain call on the song's last notes.
 
 Only the blurred working copies from recap_blur.py are ever read here, so no effect can touch an unblurred face.
 
@@ -25,10 +26,10 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import render as R  # noqa: E402
 from content import BRAND, FAMILY, SHOTS as PHOTO_SHOTS  # noqa: E402
-from recap_content import CAPTIONS, END, SHOTS, TITLE, WALL  # noqa: E402
-from render import (BEAT, CREAM, FPS, Glass, H, T0, W, WHITE, blit, clamp01, decode, ease_in_out, ease_out_back,  # noqa: E402
-                    ease_out_cubic, encode, fit_width, hash01, icon_image, lettering, logo_image, phone_copy, remux,
-                    render_frames, rounded_mask, sf, shake, text_width, to_sprite)
+from recap_content import CAPTIONS, END, MUSIC, SHOTS, TITLE, WALL  # noqa: E402
+from render import (CREAM, FPS, Glass, H, W, WHITE, blit, clamp01, decode, ease_in_out, ease_out_back,  # noqa: E402
+                    ease_out_cubic, encode, fit_width, halo_image, hash01, icon_image, lettering, logo_image, phone_copy,
+                    remux, render_frames, rounded_mask, sf, shake, text_width, to_sprite)
 
 ROOT = R.ROOT
 CLEAN = ROOT / "work" / "recap" / "clean"
@@ -38,9 +39,8 @@ MASKS = ROOT / "work" / "recap" / "masks"
 SFX = R.SFX
 EXPORTS = R.EXPORTS
 
-# the song lifts at bar 112 (3:30); start four bars before it so the build lands on the zoom through the wreath
-DROP_BEAT = 16
-MUSIC_START = T0 + (112 * 4 - DROP_BEAT) * BEAT
+BEAT = 60 / MUSIC["bpm"]
+DROP_BEAT = MUSIC["lift"]  # the song's quiet opening ends here and the band comes in
 
 # palette: the daycare's own purple and gold, plus pumpkin
 AUBERGINE = (30, 12, 44)
@@ -293,7 +293,8 @@ class Renderer:
         self.logo_small = to_sprite(logo_image(150))
         self.caps = [dict(c, w=Words(c["text"], display(c.get("size", 98)), W / 2, c["y"], max_w=c.get("max_w", 930)))
                      for c in CAPTIONS]
-        self.title_big = lettering(TITLE["big"], display(TITLE["size"]), 0, fill=(CREAM, CREAM), shadow=0.35)
+        self.title_big = lettering(TITLE["big"], display(TITLE["size"]), 0, fill=(CREAM, CREAM), shadow=0.35,
+                                   glow=(PUMPKIN, 30, 0.3))
         self.title_big_alpha = np.asarray(self.title_big.convert("RGBA"), np.float32) / 255
         self.title_sub = to_sprite(lettering(TITLE["sub"], small(62, 800), 13, fill=(GOLD_LIGHT, GOLD), shadow=0.8))
         self.title_kick = to_sprite(lettering(TITLE["kicker"], small(30, 700), 10, fill=(CREAM, CREAM), shadow=0.8))
@@ -309,6 +310,9 @@ class Renderer:
                     name=to_sprite(fit_width(lettering(c["name"], display(c.get("size", 158)), 0,
                                                        fill=(CREAM, CREAM), shadow=0.85), 980)))
         self.wall_strips = None
+        d = cv2.getGaussianKernel(25, 5)
+        d = (d @ d.T / (d @ d.T).max()).astype(np.float32)[..., None]
+        self.mote = np.dstack([np.repeat(d, 3, axis=2) * np.array([1.0, 0.92, 0.78], np.float32), d])
         self.build_end()
 
     # ----- a shot's camera -----
@@ -491,8 +495,41 @@ class Renderer:
                 blit(img, self.sparks[i % 3], x, y2, 0.5 + 0.8 * math.sin(math.pi * q), q * 90, math.sin(math.pi * q))
         return img
 
-    # ----- the title, behind the skeleton -----
-    def draw_title(self, img, base, since, dur, src_f):
+    # ----- the opening: a flashlight in the dark -----
+    @staticmethod
+    def beam(t):
+        """Where the flashlight is at time t: (x, y, radius, how far the room lights have come up 0..1)."""
+        b = t / BEAT
+        skull = (215 - 170 * min(t, 0.4), 840)
+        keys = ((0.0, *skull, 280), (0.7, *skull, 280), (1.9, 930, 800, 300), (2.4, 540, 870, 440), (3.1, 540, 900, 2300))
+        for (b0, x0, y0, r0), (b1, x1, y1, r1) in zip(keys, keys[1:]):
+            if b <= b1:
+                q = ease_in_out((b - b0) / (b1 - b0))
+                return x0 + (x1 - x0) * q, y0 + (y1 - y0) * q, r0 + (r1 - r0) * q, clamp01((b - 2.4) / 0.7)
+        return 540, 900, 2300, 1.0
+
+    def flashlight(self, img, t):
+        """Darken the room to what the beam touches. Returns the picture, the beam's mask and how far right it has reached."""
+        x, y, r, up = self.beam(t)
+        yy, xx = np.ogrid[0:H // 4, 0:W // 4]
+        d = np.sqrt((xx * 4.0 - x) ** 2 + ((yy * 4.0 - y) * 0.9) ** 2).astype(np.float32) / r
+        q = np.clip((1.05 - d) / 0.5, 0, 1)
+        low = q * q * (3 - 2 * q)
+        # it clicks on with a stutter
+        on = 0.0 if t < 0.03 else 0.85 if t < 0.07 else 0.3 if t < 0.1 else 1.0
+        m = cv2.resize(low * on, (W, H), interpolation=cv2.INTER_LINEAR)[..., None]
+        room = img * 0.07 * np.array([0.8, 0.72, 1.2], np.float32)
+        out = room * (1 - m) + img * (1.14 - 0.14 * up) * m
+        if up < 1:
+            for i in range(34):
+                px = hash01(i, 41) * W + 26 * math.sin(t * 0.8 + i)
+                py = (hash01(i, 42) * (H - 200) + 100 - t * 24) % H
+                a = float(low[int(py) // 4 % (H // 4), int(px) // 4 % (W // 4)]) * on * (1 - up) * 0.75
+                blit(out, self.mote, px, py, 0.3 + 0.5 * hash01(i, 43), 0, a)
+        reach = x + r * 0.62 if t / BEAT < 1.9 else 1e6
+        return out, reach
+
+    def draw_title(self, img, base, since, src_f, reach):
         """base is the ungraded picture: the skeleton is found in it by its darkness and kept in front of the word."""
         name = SHOTS[0]["clip"]
         path = self.path(name).raw
@@ -500,9 +537,7 @@ class Renderer:
         # the word drifts with the ceiling, a little slower than the camera, so it feels painted up there
         k = W / 2160 * 0.08
         dx, dy = (path[i, 0] - path[0, 0]) * k, (path[i, 1] - path[0, 1]) * k * 0.6
-        p = clamp01(since / 0.2)
-        s = 1.05 - 0.05 * ease_out_cubic(since / 0.34)
-        big = cv2.resize(self.title_big_alpha, None, fx=s, fy=s, interpolation=cv2.INTER_LINEAR)
+        big = self.title_big_alpha
         h, w = big.shape[:2]
         x0, y0 = int(W / 2 - w / 2 + dx + TITLE.get("dx", 0)), int(TITLE["y"] - h / 2 + dy)
         X0, Y0, X1, Y1 = max(0, x0), max(0, y0), min(W, x0 + w), min(H, y0 + h)
@@ -515,13 +550,15 @@ class Renderer:
             _, labels, stats, _ = cv2.connectedComponentsWithStats(dark)
             dark = np.isin(labels, 1 + np.flatnonzero(stats[1:, cv2.CC_STAT_AREA] >= 2500)).astype(np.uint8)
             keep = 1 - cv2.GaussianBlur(dark.astype(np.float32), (0, 0), 1.0)
-            a = region[..., 3:4] * keep[..., None] * p
+            # the letters come alight as the beam crosses them, and stay lit
+            lit = np.clip((reach - np.arange(X0, X1, dtype=np.float32)) / 140, 0, 1)[None, :, None]
+            a = region[..., 3:4] * keep[..., None] * lit
             img[Y0:Y1, X0:X1] = img[Y0:Y1, X0:X1] * (1 - a) + region[..., :3] * a
-        ps = (since - BEAT * 0.9) / 0.3
+        ps = (since - BEAT * 2) / 0.24
         if ps > 0:
-            blit(img, self.title_sub, W / 2 + dx * 0.6, TITLE["y"] + TITLE["sub_dy"] + 26 * (1 - ease_out_cubic(ps)) + dy * 0.6,
-                 1.0, 0, clamp01(ps * 2))
-        pk = (since - 0.1) / 0.3
+            blit(img, self.title_sub, W / 2 + dx * 0.6, TITLE["y"] + TITLE["sub_dy"] + dy * 0.6,
+                 1.12 - 0.12 * ease_out_cubic(ps), 0, clamp01(ps * 2.5))
+        pk = (since - BEAT * 0.9) / 0.3
         if pk > 0:
             blit(img, self.title_kick, W / 2, TITLE["y"] + TITLE["kick_dy"], 1.0, 0, clamp01(pk * 2))
 
@@ -605,12 +642,13 @@ class Renderer:
             img[:, x0 + c * (tw + gap):x0 + c * (tw + gap) + tw] = colimg
         return img
 
-    # ----- the closing card -----
+    # ----- the closing card: a star wipe, then a curtain call -----
     def build_end(self):
-        self.e_logo = to_sprite(logo_image(330))
-        self.e_l1 = to_sprite(lettering(END["line1"], display(92, 500), 0, fill=(CREAM, CREAM), shadow=0.8))
-        self.e_l2 = to_sprite(fit_width(lettering(END["line2"], display(196, 900), 0, fill=(GOLD_LIGHT, GOLD), shadow=0.85), 960))
-        self.e_tag = to_sprite(lettering(END["tag"], small(34, 600), 2, fill=(CREAM, CREAM), shadow=0.7))
+        self.e_logo = to_sprite(logo_image(300))
+        self.e_halo = to_sprite(halo_image(820, 640, GOLD, 0.5))
+        self.e_l1 = to_sprite(lettering(END["line1"], display(88, 500), 0, fill=(CREAM, CREAM), shadow=0.8))
+        self.e_l2 = to_sprite(fit_width(lettering(END["line2"], display(186, 900), 0, fill=(GOLD_LIGHT, GOLD), shadow=0.85), 940))
+        self.e_tag = to_sprite(lettering(END["tag"], small(33, 600), 2, fill=(CREAM, CREAM), shadow=0.7))
         f_main = small(40, 700)
         f_addr = small(35, 600)
         rows = [("phone", [lettering(BRAND["phone"], f_main, 1, fill=(WHITE, WHITE), shadow=0)]),
@@ -620,38 +658,130 @@ class Renderer:
         card_w = max(max(t.width for t in txt) for _, txt in rows) + 196
         self.e_cards = []
         for kind, txt in rows:
-            h = 120 if len(txt) == 1 else 152
-            self.e_cards.append(dict(glass=Glass(card_w, h, 34, stops=(GOLD, GOLD_LIGHT, PLUM), dark=0.4),
+            h = 112 if len(txt) == 1 else 146
+            self.e_cards.append(dict(glass=Glass(card_w, h, 34, stops=(GOLD, GOLD_LIGHT, PLUM), dark=0.55),
                                      icon=to_sprite(icon_image(kind, 50, GOLD)), h=h, w=card_w,
                                      text=[to_sprite(t) for t in txt]))
         self.e_foot = to_sprite(lettering(f"{BRAND['web']}   ·   {BRAND['instagram']}", small(36, 700), 2,
                                           fill=(GOLD_LIGHT, GOLD), shadow=0.8))
+        # a dark theatre, with a pool of light on the stage where the cast lands
+        bg = np.empty((H, W, 3), np.float32)
+        pos = np.linspace(0, 1, H)
+        stops = [0, 0.4, 0.78, 1]
+        for c, vals in enumerate(zip((22, 9, 34), (60, 24, 86), (36, 14, 56), (24, 9, 36))):
+            bg[..., c] = (np.interp(pos, stops, vals) / 255)[:, None]
+        yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
+        pool = np.exp(-(((xx - W / 2) / 800) ** 2 + ((yy - 1800) / 330) ** 2) * 1.3)[..., None]
+        self.e_bg = bg + pool * np.array([0.2, 0.11, 0.27], np.float32)
+        del yy, xx
+        ry, rx = np.mgrid[0:H // 6, 0:W // 6].astype(np.float32)
+        self.e_theta = np.arctan2(ry * 6 - 300, rx * 6 - W / 2)
+        self.e_r = np.hypot(ry * 6 - 300, rx * 6 - W / 2)
+        self.e_cast = None
+
+    def curtain(self):
+        """The cut-outs from the cast cards, as stickers for the curtain call."""
+        if self.e_cast is not None:
+            return self.e_cast
+        self.e_cast = []
+        kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (33, 33))
+        for c in END["cast"]:
+            src = Source(c["clip"], 1620)
+            fr = src.frame(c["frame"])
+            src.close()
+            matte = cv2.imread(str(MASKS / f"{c['clip']}_f{c['frame']}.png"), cv2.IMREAD_GRAYSCALE)
+            ys, xs = np.nonzero(matte > 40)
+            y0, y1, x0, x1 = max(0, ys.min() - 40), ys.max() + 40, max(0, xs.min() - 40), xs.max() + 40
+            m = np.clip((matte[y0:y1, x0:x1].astype(np.float32) / 255 - 0.25) / 0.5, 0, 1)
+            edge = cv2.GaussianBlur(cv2.dilate(m, kernel), (0, 0), 2.0)
+            x = cv2.LUT(fr[y0:y1, x0:x1], CURVE).astype(np.float32) / 255
+            lum = (x @ LUMA)[..., None]
+            x = np.clip((lum + (x - lum) * 1.14) * np.array([1.025, 1.0, 0.965], np.float32), 0, 1)
+            cream = np.array(CREAM, np.float32) / 255
+            rgb = cream * (edge * (1 - m))[..., None] + x * m[..., None]
+            k = c["height"] / rgb.shape[0]
+            spr = cv2.resize(np.dstack([rgb, edge]), None, fx=k, fy=k, interpolation=cv2.INTER_AREA)
+            self.e_cast.append(dict(c, spr=spr))
+        return self.e_cast
+
+    def burst(self, img, since, cx, cy, seed, n=14, radius=430):
+        for i in range(n):
+            q = (since - 0.012 * i) / 0.75
+            if 0 < q < 1:
+                a = hash01(seed, i, 1) * 2 * math.pi
+                d = radius * (0.45 + 0.55 * hash01(seed, i, 2)) * ease_out_cubic(q)
+                blit(img, self.sparks[i % 3], cx + math.cos(a) * d, cy + math.sin(a) * d, 0.5 + 0.7 * math.sin(math.pi * q),
+                     q * 120, math.sin(math.pi * q))
+
+    @staticmethod
+    def shine(img, spr, cx, cy, q):
+        """A bright diagonal glint crossing a sprite (q 0..1)."""
+        h, w = spr.shape[:2]
+        x0, y0 = int(cx - w / 2), int(cy - h / 2)
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        band = np.exp(-(((xx + 0.5 * yy) - (-0.2 + 1.4 * q) * (w + 0.5 * h)) / 46) ** 2)[..., None]
+        img[y0:y0 + h, x0:x0 + w] += band * spr[..., 3:4] * 0.75
+
+    @staticmethod
+    def star_mask(radius, rot):
+        pts = []
+        for i in range(10):
+            r = radius if i % 2 == 0 else radius * 0.46
+            a = math.radians(rot) - math.pi / 2 + i * math.pi / 5
+            pts.append((W / 4 + r / 2 * math.cos(a), H * 0.42 / 2 + r / 2 * math.sin(a)))
+        m = np.zeros((H // 2, W // 2), np.uint8)
+        cv2.fillPoly(m, [np.array(pts, np.float32).round().astype(np.int32)], 255, lineType=cv2.LINE_AA)
+        return m
 
     def end_picture(self, t, seg):
         since = t - seg["t0"]
-        base = self.wall_picture(t, self.seg("wall"))
-        p = clamp01(since / 0.4)
-        small_img = cv2.resize(base, (W // 6, H // 6), interpolation=cv2.INTER_AREA)
-        small_img = cv2.GaussianBlur(small_img, (0, 0), 1.0 + 4.0 * p)
-        soft = cv2.resize(small_img, (W, H), interpolation=cv2.INTER_LINEAR)
-        tint = np.array(AUBERGINE, np.float32) / 255
-        img = base * (1 - p) + (soft * 0.34 + tint * 0.5) * p
-        # logo and the words
+        rays = (0.5 + 0.5 * np.sin(11 * self.e_theta + 0.5 * t)) ** 6 + 0.6 * (0.5 + 0.5 * np.sin(17 * self.e_theta - 0.35 * t + 1.3)) ** 8
+        rays = cv2.resize((rays * np.exp(-self.e_r / 850)).astype(np.float32), (W, H), interpolation=cv2.INTER_LINEAR)
+        img = self.e_bg + rays[..., None] * np.array([1.0, 0.78, 0.45], np.float32) * 0.3 * clamp01(since / 0.5)
+        for i in range(14):
+            q = (since * 0.09 + hash01(i, 31)) % 1
+            blit(img, self.sparks[i % 3], hash01(i, 32) * W + 30 * math.sin(since * 0.8 + i), H - q * (H + 80),
+                 0.45 + 0.4 * hash01(i, 33), since * 40 + i * 30, 0.55 * math.sin(math.pi * q) * clamp01(since / 0.5))
+        at = lambda beat: (beat - seg["b0"]) * BEAT  # noqa: E731
+        button = at(END["button"])
+        # the cast, behind the words: each hops up from below the frame, then bobs on the beat
+        for c in self.curtain():
+            land = at(c["hop"])
+            p = (since - land) / 0.32
+            if p <= 0:
+                continue
+            spr = c["spr"]
+            h, w = spr.shape[:2]
+            y = c["bottom"] - h / 2 + (1 - ease_out_back(p, 1.3)) * h * 1.05
+            beats = (since - land) / BEAT
+            y -= 9 * abs(math.sin(math.pi * beats))
+            jump = (since - button) / 0.42
+            if 0 < jump < 1:
+                y -= 66 * math.sin(math.pi * jump)
+            blit(img, spr, c["x"], y, 1.0, 1.6 * math.sin(math.pi * beats) * clamp01(p - 1), 1.0, pivot=(w / 2, h))
+        # the logo and the words
         pl = since / 0.42
+        ly = 300 - 4 * math.sin(since * 2.4)
         if pl > 0:
-            blit(img, self.e_logo, W / 2, 345 - 4 * math.sin(since * 2.4), 0.8 + 0.2 * ease_out_back(pl), 0, clamp01(pl * 2.2))
+            blit(img, self.e_halo, W / 2, ly, 1.0, 0, 0.75 * clamp01(pl * 2))
+            blit(img, self.e_logo, W / 2, ly, 0.8 + 0.2 * ease_out_back(pl), 0, clamp01(pl * 2.2))
+        for start in (at(40), button):
+            q = (since - start) / 0.5
+            if 0 < q < 1 and pl >= 1:
+                self.shine(img, self.e_logo, W / 2, ly, q)
+        self.burst(img, since - 0.05, W / 2, ly, 5)
         p1 = (since - 0.28) / 0.3
         if p1 > 0:
-            blit(img, self.e_l1, W / 2, 585 + 24 * (1 - ease_out_cubic(p1)), 1.0, 0, clamp01(p1 * 2))
+            blit(img, self.e_l1, W / 2, 528 + 24 * (1 - ease_out_cubic(p1)), 1.0, 0, clamp01(p1 * 2))
         p2 = (since - 0.42) / 0.34
         if p2 > 0:
-            blit(img, self.e_l2, W / 2, 715 + 30 * (1 - ease_out_cubic(p2)), 0.94 + 0.06 * ease_out_back(p2), 0, clamp01(p2 * 2))
+            blit(img, self.e_l2, W / 2, 648 + 30 * (1 - ease_out_cubic(p2)), 0.94 + 0.06 * ease_out_back(p2), 0, clamp01(p2 * 2))
         p3 = (since - 0.8) / 0.3
         if p3 > 0:
-            blit(img, self.e_tag, W / 2, 850, 1.0, 0, clamp01(p3 * 2))
-        y = 952
+            blit(img, self.e_tag, W / 2, 778, 1.0, 0, clamp01(p3 * 2))
+        y = 846
         for i, c in enumerate(self.e_cards):
-            pc = (since - 1.0 - i * 0.14) / 0.3
+            pc = (since - at(40.07) - i * 0.26) / 0.3  # one card per half beat, from the song's first closing hit
             cy = y + c["h"] / 2
             if pc > 0:
                 a = clamp01(pc * 2)
@@ -662,16 +792,23 @@ class Renderer:
                 for k, spr in enumerate(c["text"]):
                     ty = cy + dy + (k - (n - 1) / 2) * 50
                     blit(img, spr, x0 + 138 + spr.shape[1] / 2, ty, 1.0, 0, a)
-            y += c["h"] + 16
-        pf = (since - 1.65) / 0.3
+            y += c["h"] + 14
+        pf = (since - at(41.6)) / 0.3
         if pf > 0:
-            blit(img, self.e_foot, W / 2, y + 44, 1.0, 0, clamp01(pf * 2))
-        for i in range(14):
-            q = ((since * 0.09 + hash01(i, 31)) % 1)
-            x = hash01(i, 32) * W + 30 * math.sin(since * 0.8 + i)
-            yy = H - q * (H + 80)
-            blit(img, self.sparks[i % 3], x, yy, 0.45 + 0.4 * hash01(i, 33), since * 40 + i * 30,
-                 0.55 * math.sin(math.pi * q) * clamp01(since / 0.5))
+            blit(img, self.e_foot, W / 2, y + 30, 1.0, 0, clamp01(pf * 2))
+        # the song's last hit
+        if button < since < button + 0.3:
+            img = add_flash(img, 0.16 * math.exp(-(since - button) / 0.09))
+        self.burst(img, since - button, W / 2, 1500, 9, 18, 620)
+        # it all opens from a star growing out of the wall of costumes
+        if since < 0.42:
+            q = since / 0.42
+            m = self.star_mask(2750 * q ** 2.4 + 1, -20 + 70 * q)
+            rim = cv2.dilate(m, cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (11, 11))).astype(np.float32) - m
+            m = cv2.resize(m, (W, H), interpolation=cv2.INTER_LINEAR).astype(np.float32)[..., None] / 255
+            rim = cv2.resize(rim, (W, H), interpolation=cv2.INTER_LINEAR)[..., None] / 255
+            img = self.wall_picture(t, self.seg("wall")) * (1 - m) + img * m
+            img = img + (np.array(GOLD_LIGHT, np.float32) / 255 - img) * rim
         return img
 
     def seg(self, kind):
@@ -688,7 +825,8 @@ class Renderer:
         base = self.sample(sh, tau, dur)
         img = grade(base, sh.get("mood", 0.0))
         if sg["i"] == 0:
-            self.draw_title(img, base, tau, dur, self.src_frame(sh, tau))
+            img, reach = self.flashlight(img, tau)
+            self.draw_title(img, base, tau, self.src_frame(sh, tau), reach)
         return img
 
     def wreath_through(self, sg, nxt, t):
@@ -786,8 +924,9 @@ class Renderer:
         if sg["kind"] == "shot":
             cast = sg["shot"].get("cast")
             in_cast = cast and t - sg["t0"] >= sg["t1"] - sg["t0"] - cast["beats"] * BEAT
-            if not in_cast and sg["shot"].get("logo", True) and not (sg["i"] == 0 and t < 0.4):
-                blit(img, self.logo_small, 112, 208, 1.0, 0, 0.96)
+            if not in_cast and sg["shot"].get("logo", True):
+                # in the first shot it waits for the lights to come up
+                blit(img, self.logo_small, 112, 208, 1.0, 0, 0.96 if sg["i"] else 0.96 * clamp01((t / BEAT - 2.6) / 0.4))
         return img
 
     def arrive(self, img, how, since):
@@ -805,33 +944,22 @@ class Renderer:
 
 
 # ---------- sound ----------
-def lowpass_sweep(x, sr, f_start, f_end, n_sweep):
-    """Muffle the first n_sweep samples, opening from f_start to f_end Hz, as if the music were in the next room."""
-    win, hop = 4096, 1024
-    w = np.hanning(win)[:, None]
-    out = np.zeros_like(x)
-    norm = np.zeros((len(x), 1), np.float32)
-    freqs = np.fft.rfftfreq(win, 1 / sr)
-    for i in range(0, max(1, n_sweep), hop):
-        seg = x[i:i + win]
-        if len(seg) < win:
-            seg = np.pad(seg, ((0, win - len(seg)), (0, 0)))
-        q = min(1.0, i / max(1, n_sweep))
-        fc = f_start * (f_end / f_start) ** (q ** 1.6)
-        gain = 1 / np.sqrt(1 + (freqs / fc) ** 6)
-        spec = np.fft.rfft(seg * w, axis=0) * gain[:, None]
-        y = np.fft.irfft(spec, n=win, axis=0).astype(np.float32) * w
-        j = min(len(x), i + win)
-        out[i:j] += y[:j - i].astype(np.float32)
-        norm[i:j] += (w[:j - i] ** 2).astype(np.float32)
-    keep = norm[:, 0] > 1e-3
-    out[keep] /= norm[keep]
-    mix = np.zeros((len(x), 1), np.float32)
-    mix[:n_sweep] = 1
-    fade = min(int(0.02 * sr), n_sweep)
-    if fade:
-        mix[n_sweep - fade:n_sweep] = np.linspace(1, 0, fade)[:, None]
-    return out * mix + x * (1 - mix)
+def synth_click(sr):
+    """A flashlight's switch: a tiny tick and a small low thump."""
+    n = int(0.09 * sr)
+    t = np.arange(n, dtype=np.float32) / sr
+    rng = np.random.default_rng(7)
+    x = rng.normal(0, 1, n).astype(np.float32) * np.exp(-t * 300).astype(np.float32) * 0.8
+    x = x + np.sin(2 * np.pi * 95 * t) * np.exp(-t * 45).astype(np.float32) * 0.6
+    return np.stack([x, x], 1) * 0.6
+
+
+def synth_pop(sr):
+    """A soft cartoon pop for each child landing in the curtain call."""
+    n = int(0.11 * sr)
+    t = np.arange(n, dtype=np.float32) / sr
+    x = np.sin(2 * np.pi * (520 * t - 1500 * t * t)) * np.exp(-t * 32).astype(np.float32)
+    return np.stack([x, x], 1) * 0.5
 
 
 def synth_shutter(sr):
@@ -859,15 +987,15 @@ def synth_ting(sr, f=2093.0):
 
 def sfx_events(r):
     drop = bt(DROP_BEAT)
-    ev = [("impact", 0.0, -8, 0, None), ("riser", drop - 3.6, -9, 0, None),
-          ("ghost_whoosh", drop - 0.5, -9, 0, None), ("impact", drop, -2.5, 0, None),
+    ev = [("@click", 0.02, -7, 0, None), ("impact", 0.02, -18, 0, None), ("riser", drop - 3.6, -14, 0, None),
+          ("ghost_whoosh", drop - 0.5, -10, 0, None), ("impact", drop, -4, 0, None),
           ("@laugh", drop + 0.45, 0, 0, None)]
     for sg in r.segs:
         if sg["kind"] != "shot":
             continue
         sh = sg["shot"]
         if sh.get("in", {}).get("kind") == "whip":
-            ev.append(("whoosh", sg["t0"] - 0.22, -13, 0, 0.9))
+            ev.append(("whoosh", sg["t0"] - 0.22, -14, 0, 0.9))
         if sh.get("cast"):
             at = sg["t1"] - sh["cast"]["beats"] * BEAT
             ev.append(("@shutter", at, -8, 0, None))
@@ -876,7 +1004,11 @@ def sfx_events(r):
     ev.append(("whoosh", wall["t0"] - 0.22, -11, 0, 0.9))
     for b in range(1, WALL["beats"]):
         ev.append(("whoosh", wall["t0"] + b * BEAT - 0.1, -19, 0, 0.6))
-    ev += [("impact", end["t0"], -9, 0, None), ("witch", end["t0"] + 2.1, -14, 0, None)]
+    ev += [("whoosh", end["t0"] - 0.2, -12, 0, 0.9), ("impact", end["t0"], -9, 0, None), ("@ting", end["t0"] + 0.1, -13, 0, None)]
+    for c in END["cast"]:
+        ev.append(("@pop", end["t0"] + (c["hop"] - end["b0"]) * BEAT + 0.15, -12, 0, None))
+    button = end["t0"] + (END["button"] - end["b0"]) * BEAT
+    ev += [("@ting", button + 0.02, -11, 0, None), ("witch", button + 0.3, -13, 0, None)]
     return ev
 
 
@@ -885,22 +1017,23 @@ def build_audio(r, music=True):
     n = int(math.ceil(r.total * sr))
     mix = np.zeros((n, 2), np.float32)
     if music:
-        m = decode(R.MUSIC, MUSIC_START, r.total)
-        m = lowpass_sweep(m, sr, 650.0, 7000.0, int(bt(DROP_BEAT) * sr))
-        # held back a little until it lifts
-        k = int(bt(DROP_BEAT) * sr)
-        env = np.ones((len(m), 1), np.float32)
-        env[:k] = np.linspace(0.72, 0.95, k)[:, None] ** 1.5
-        m = m * env
-        fade_n = int(1.8 * sr)
-        m[-fade_n:] *= np.linspace(1, 0, fade_n)[:, None] ** 1.5
-        mix[:min(n, len(m))] += m[:n] * 0.95
+        song = R.ROOT / "source" / "music" / MUSIC["file"]
+        when = lambda beat: MUSIC["first_beat"] + beat * BEAT  # noqa: E731
+        # the song from its quiet opening, then a short cross-fade into its last bars under the star wipe
+        join, xf = int(bt(MUSIC["join"]) * sr), int(0.03 * sr)
+        m = decode(song, when(MUSIC["start"]), bt(MUSIC["join"]) + 0.03)[:join + xf]
+        m[-xf:] *= np.linspace(1, 0, xf)[:, None]
+        mix[:len(m)] += m * 0.95
+        m = decode(song, when(MUSIC["ending"]), r.total - bt(MUSIC["join"]))[:n - join]
+        m[:xf] *= np.linspace(0, 1, xf)[:, None]
+        mix[join:join + len(m)] += m * 0.95
     # a real laugh from the tiger's clip, under the moment the kids arrive (no names are spoken in it)
     laugh = decode(next((ROOT / "source" / "recap_raw").glob("IMG_7994.*")), 0.95, 0.85)
     fade = int(0.08 * sr)
     laugh[:fade] *= np.linspace(0, 1, fade)[:, None]
     laugh[-fade:] *= np.linspace(1, 0, fade)[:, None]
-    cache = {"@shutter": synth_shutter(sr), "@ting": synth_ting(sr), "@laugh": laugh}
+    cache = {"@shutter": synth_shutter(sr), "@ting": synth_ting(sr), "@laugh": laugh, "@click": synth_click(sr),
+             "@pop": synth_pop(sr)}
     for name, t, g, s0, ln in sfx_events(r):
         key = (name, s0, ln)
         if name not in cache and key not in cache:
@@ -949,7 +1082,7 @@ def main():
             print("wrote", t, flush=True)
         return
     EXPORTS.mkdir(exist_ok=True)
-    cover = (np.clip(r.frame(0.75), 0, 1) * 255 + 0.5).astype(np.uint8)
+    cover = (np.clip(r.frame(1.2), 0, 1) * 255 + 0.5).astype(np.uint8)
     Image.fromarray(cover).save(EXPORTS / "recap_cover.jpg", quality=95)
     raw = ROOT / "work" / "recap" / "frames.rgb"
     render_frames(r, raw)
