@@ -53,11 +53,29 @@ The photo order, the costume labels, each cut's transition, the timing (in beats
 
 `render.py` writes every frame to `work/frames.rgb` before encoding, so it needs about 5 GB of free disk but little memory. If it stops (for example when the PC runs short of memory), run it again and it carries on from the last finished frame.
 
+## Recap of Last Week
+
+A second film from the same week, cut from real video instead of photos: 25 seconds, told like a movie trailer. The halls at dusk with the music held back behind a filter, a dive through the Halloween wreath as the song lifts, then the kids take over in daylight colours. Each star freezes into a cut-out sticker with a movie credit, and a wall of costumes scrolls into the closing card.
+
+Faces in video need more care than faces in photos, so each step has its own script. The blur is baked in before anything else touches the footage, so no effect can ever work from an unblurred frame.
+
+```bash
+.venv/Scripts/python.exe -I edits/recap_detect.py     # every face in every frame, plus the camera's motion
+.venv/Scripts/python.exe -I edits/recap_track.py --sheets  # link them into tracks, sheets for checking by eye
+.venv/Scripts/python.exe -I edits/recap_blur.py       # bake the blur into 4K working copies
+.venv/Scripts/python.exe -I edits/recap.py --stills 1 9.5 22  # check frames
+.venv/Scripts/python.exe -I edits/recap.py            # the film, with music and without, plus its cover
+.venv/Scripts/python.exe -I edits/recap_verify.py     # look through the finished film for anything that reads as a face
+```
+
+Put the clips in `source/recap_raw/` first. Decisions made by eye (false hits, weak faces to keep) live in `edits/recap_faces.json`, and the shots, timing and words live in `edits/recap_content.py`. The sticker cut-outs come from `edits/recap_masks.py`, which runs in its own environment (see the top of that file). All of this runs on your own machine, so no footage is uploaded anywhere.
+
 ## Tech stack
 
 - **Python** with NumPy, OpenCV (YuNet face detection, warping, compositing) and Pillow (lettering and graphics, `pillow-heif` for iPhone photos)
 - **FFmpeg** for H.264/AAC encoding and two-pass EBU R128 loudness normalisation
-- **Fonts:** Grenze Gotisch (neon gothic titles), Cinzel (costume names) and Montserrat (small print), all from Google Fonts (OFL)
+- **rembg** (`isnet-general-use`, run locally) for the recap's sticker cut-outs
+- **Fonts:** Grenze Gotisch (neon gothic titles), Cinzel (costume names) and Montserrat (small print) in the costume reel; Fraunces and Inter Tight in the recap, all from Google Fonts (OFL)
 - **Music and sound effects:** "Ghosts of the Past" by melodyayresgriffiths on [Pixabay](https://pixabay.com/music/scary-childrens-tunes-ghosts-of-the-past-instrumental-halloween-autumn-spooky-upbeat-boppy-171666/), plus Pixabay sound effects (Pixabay Content License, no Content ID)
 - **AI backgrounds:** [OpenGen](https://opengen.ai) (Nano Banana 2.1 stills, Veo 3.1 Lite image-to-video) for the haunted house and the haunted classroom. No child appears in any generated footage.
 

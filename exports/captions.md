@@ -1,3 +1,50 @@
+# Recap of Last Week: captions and posting notes
+
+The newest video: Halloween week at Tiny Stars, told like a film trailer. Filmed at the daycare on October 30, 2026.
+
+## Files
+
+| File | Use it for |
+|---|---|
+| `recap_last_week.mp4` | The film: 25 seconds, full HD 1080×1920, with music and sound effects. It's 28 MB, so this same file works from a computer or a phone. |
+| `recap_last_week_nomusic.mp4` | Sound effects and a real laugh from the day, no music, if you'd rather add a sound inside the app |
+| `recap_cover.jpg` | Cover image: the "Recap of Last Week" title with the hanging skeleton beside it |
+
+## Instagram Reel / Facebook Reel caption
+
+🎬🎃 **Recap of last week: Halloween at Tiny Stars!** 🎃🎬
+
+First the halls got haunted 👻🕸️ Then the little monsters showed up 🐯💙🐥🚒🦖 and took over every classroom!
+
+👇 **Who stole the show? Tell us in the comments!** 👇
+
+A huge thank-you to our families and our amazing team for making it so much fun 🧡
+
+⭐ Now enrolling! Book a tour: tinystars.ca | 📞 (780) 230-1599
+📍 10629 West Side Drive, Grande Prairie, Alberta 🇨🇦
+
+⭐ Little stars today, bright futures tomorrow!
+
+#TinyStarsDaycare #RecapOfLastWeek #HalloweenRecap #HalloweenAtDaycare #GrandePrairie #GrandePrairieDaycare #GPAlberta #DaycareLife #ToddlerCostumes #KidsHalloween #ChildcareAlberta #EarlyChildhoodEducation #LittleMonsters
+
+## TikTok caption (shorter)
+
+Recap of last week: the halls got haunted, then the little monsters showed up 🎃🐯🐥 #TinyStarsDaycare #HalloweenRecap #daycarelife #toddlercostume #GrandePrairie #halloween
+
+## Alt text
+
+A recap of Halloween week at Tiny Stars Daycare: decorated hallways with ghosts, a skeleton and a spider-web wreath, then children in costumes, including a tiger, a blue monster, a baby chick and a firefighter, playing in their classrooms. Faces are blurred for privacy.
+
+## Posting notes
+
+- **Every face is blurred**, kids and adults, tracked through each clip frame by frame and checked by eye.
+- **All real footage:** apart from the graphics, everything is your own video and photos. No AI-generated scenes, so no AI label is needed.
+- **Music:** the same track as the costume reel, "Ghosts of the Past" by melodyayresgriffiths (Pixabay), free for commercial use with no Content ID. The sound effects are from Pixabay or made for this video.
+- **Upload quality:** the settings further down this page apply here too, especially Instagram's "Upload at highest quality".
+- **Costume names** are playful descriptions, not character names, which keeps the business page clear of trademarks.
+
+---
+
 # Tiny Stars Halloween Costume Parade: captions and posting notes
 
 ## Files
